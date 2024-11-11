@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <title>WebRTC</title>
+  </head>
+  <body>
+    <h2>Grønn Webteknologi - WebRTC</h2>
+    <div id="app">
+      <ul id="messages">
+        <li :key="'message' + index" v-for="(message, index) in listOfMessages">
+          {{ message }}
+        </li>
+      </ul>
+      <div id="box1">
+        <input type="text" v-model="input" @keydown.enter="sendPeerMessage"/>
+        <button @click="sendPeerMessage">Send</button>
+      </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.11"></script>
+    <script type="module">
+      function generateLoremIpsum(length) {
+        const loremWords = [
+        "Lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit",
+        "sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore",
+        "magna", "aliqua", "Ut", "enim", "ad", "minim", "veniam", "quis", "nostrud",
+        "exercitation", "ullamco", "laboris", "nisi", "ut", "aliquip", "ex", "ea",
+        "commodo", "consequat", "Duis", "aute", "irure", "dolor", "in", "reprehenderit",
+        "in", "voluptate", "velit", "esse", "cillum", "dolore", "eu", "fugiat", "nulla",
+        "pariatur"
+        ];
+    
+        let text = "Lorem ipsum ";
+        while (text.length < length) {
+          text += loremWords[Math.floor(Math.random() * loremWords.length)] + " ";
+        }
+        return text.trim().substring(0, length);
+      }
+
+      const socket = io(); // signaling server
+
+      const peerConnectionConfig = {
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      };
+      let peerConnection = new RTCPeerConnection(peerConnectionConfig);
+      let dataChannel = null;
+
+      const vueApp = new Vue({
+        el: "#app",
+        data: {
+          input: "",
+          listOfMessages: [],
+          mySocketId: null,
+          peerSocketId: null,
+        },
+        methods: {
+          sendPeerMessage() {
+            if (dataChannel) {
+              dataChannel.send(this.input);
+              this.listOfMessages.push(this.mySocketId + ": " + this.input); // client uses it's own socket.id for messages sent by itself
+              this.input = "";
+            }
+          },
+          
+        },
+        mounted() {
+          socket.on('connect', () => {
+            this.mySocketId = socket.id; // stores clients own socket.id when connected
+          });
+
+          socket.on('signal', (data) => {
+            if (data.sdp) {
+              // when offer or answer received
+              peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp))
+                .then(() => {
+                  if (data.sdp.type === "offer") {
+                    peerConnection.createAnswer()
+                      .then(answer => {
+                        peerConnection.setLocalDescription(answer);
+                        socket.emit("signal", { sdp: answer });
+                      });
+                  }
+                });
+            } else if (data.candidate) {
+              // when ICE candidate received
+              peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            }
+
+            if (!this.peerSocketId) {
+              this.peerSocketId = data.senderId; // stores peer's socket.id
+            }
+          });
+
+          peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+              socket.emit("signal", { candidate: event.candidate });
+            }
+          };
+
+          peerConnection.ondatachannel = (event) => {
+            dataChannel = event.channel;
+            dataChannel.onmessage = (event) => {
+              this.listOfMessages.push(this.peerSocketId + ": " + event.data); // use peer's socket.id for received messages
+            };
+          };
+
+          // creates the data channel on peer connection
+          dataChannel = peerConnection.createDataChannel("chat");
+          dataChannel.onopen = () => console.log("Data channel is open");
+          dataChannel.onmessage = (event) => {
+            this.listOfMessages.push(this.peerSocketId + ": " + event.data);
+          };
+
+          // implementation of "auto-messaging"
+          dataChannel.onopen = () => {
+            console.log("Data channel open");
+            this.listOfMessages.push(this.mySocketId + ": User connected");
+            if (this.listOfMessages.length <= 20) {
+              const intervalId = setInterval(() => {
+                if (this.listOfMessages.length > 20) {
+                  clearInterval(intervalId);
+                } else {
+                  const autoMessage = generateLoremIpsum(1000); // use generated Lorem Ipsum, length specifies bytes
+                  dataChannel.send(autoMessage);
+                  this.listOfMessages.push(this.mySocketId + ": " + autoMessage);
+                }
+              }, 3000); // adjust timeout for frequency of messages
+            }
+          };
+
+          // creates and sends the offer to the other peer
+          peerConnection.createOffer()
+            .then(offer => {
+              peerConnection.setLocalDescription(offer);
+              socket.emit("signal", { sdp: offer });
+            });
+        }
+      });
+    </script>
+  </body>
+</html>
