@@ -1,5 +1,5 @@
 {
-  "name": "bo-webrtc",
+  "name": "bo_webrtc",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
