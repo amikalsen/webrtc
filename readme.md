@@ -60,7 +60,7 @@ Applikasjonen inkluderer automatiserte funksjoner for å:
 
 - Starte serveren.
 - Åpne flere nettleservinduer.
-- Generere automatiserte meldinger for å teste long polling.
+- Generere automatiserte meldinger for å teste WebRTC.
 
 Applikasjonen lukker automatisk serveren og nettleservinduene etter 40 sekunder. Du kan justere denne tiden i `testApp.mjs`.
 
