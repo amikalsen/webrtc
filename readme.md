@@ -1,6 +1,6 @@
 # Grønn Webteknologi - WebRTC chat applikasjon
 
-Dette prosjektet er en enkel WebRTC-basert chat-applikasjon som inkluderer funksjoner for sanntidskommunikasjon mellom to klienter. WebRTC brukes til direkte datakanaler mellom klientene, mens Socket.IO fungerer som en signaliseringsserver.
+Dette prosjektet er en enkel WebRTC-basert chat-applikasjon som inkluderer funksjoner for sanntidskommunikasjon mellom to klienter. WebRTC brukes til direkte datakanaler mellom klientene, mens Socket.IO fungerer som en signaleringsserver.
 
 
 ## Forutsetninger
@@ -46,7 +46,7 @@ Når applikasjonen kjører, åpne [http://localhost:3000](http://localhost:3000)
 
 ## Applikasjonsstruktur
 
-- **`server.js`**: Backend-logikk for signalisering ved hjelp av Socket.IO.
+- **`server.js`**: Backend-logikk for signalering ved hjelp av Socket.IO.
 - **`testApp.mjs`**: Automatiserer prosessen med å starte serveren og åpne nettleservinduer.
 - **`index.html`**: Frontend for applikasjonen.
 - **`package.json`**: Definerer avhengigheter og skript for prosjektet.
